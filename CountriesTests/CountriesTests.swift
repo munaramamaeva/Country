@@ -12,8 +12,8 @@ final class CountriesTests: XCTestCase {
 
     func testFetchCountriesReturnsNetworkResult() async throws {
         let countries = SampleData.countries
-        let executor = NetworkExecutorMock(result: .success(countries))
-        let service = CountriesService(networkExecutor: executor)
+        let executor = NetworkExecutorMock(result: Result<[Country], Error>.success(countries))
+        let service = await CountriesService(networkExecutor: executor)
 
         let fetched = try await service.fetchCountries()
 
@@ -22,8 +22,8 @@ final class CountriesTests: XCTestCase {
     }
 
     func testFetchCountriesPropagatesNetworkError() async {
-        let executor = NetworkExecutorMock(result: .failure(MockError.sample))
-        let service = CountriesService(networkExecutor: executor)
+        let executor = NetworkExecutorMock(result: Result<[Country], Error>.failure(MockError.sample))
+        let service = await CountriesService(networkExecutor: executor)
 
         do {
             _ = try await service.fetchCountries()
@@ -33,20 +33,23 @@ final class CountriesTests: XCTestCase {
         }
     }
     
+    @MainActor
     func testLoadCountriesSuccess() async throws {
         let countries = SampleData.countries
-        let service = CountriesServiceMock(result: .success(countries))
+        let sortedCountries = countries.sorted { $0.displayName < $1.displayName }
+        let service = CountriesServiceMock(result: Result<[Country], Error>.success(countries))
         let viewModel = CountryListViewModel(service: service, pageSize: 2)
 
         await viewModel.loadCountries()
 
-        XCTAssertEqual(viewModel.state, .loaded)
+        XCTAssertEqual(viewModel.state, CountryListViewModel.LoadState.loaded)
         XCTAssertEqual(viewModel.visibleCountries.count, 2)
-        XCTAssertEqual(viewModel.visibleCountries.first?.displayName, countries.first?.displayName)
+        XCTAssertEqual(viewModel.visibleCountries, Array(sortedCountries.prefix(2)))
     }
 
+    @MainActor
     func testLoadCountriesFailurePropagatesError() async {
-        let service = CountriesServiceMock(result: .failure(MockError.sample))
+        let service = CountriesServiceMock(result: Result<[Country], Error>.failure(MockError.sample))
         let viewModel = CountryListViewModel(service: service)
 
         await viewModel.loadCountries()
@@ -58,9 +61,10 @@ final class CountriesTests: XCTestCase {
         XCTAssertEqual(viewModel.visibleCountries.count, 0)
     }
 
+    @MainActor
     func testSearchFiltersCountries() async throws {
         let countries = SampleData.countries
-        let service = CountriesServiceMock(result: .success(countries))
+        let service = CountriesServiceMock(result: Result<[Country], Error>.success(countries))
         let viewModel = CountryListViewModel(service: service)
 
         await viewModel.loadCountries()
@@ -70,20 +74,24 @@ final class CountriesTests: XCTestCase {
         XCTAssertEqual(viewModel.visibleCountries.first?.displayName, "Norway")
     }
 
+    @MainActor
     func testRegionFilterFiltersCountries() async throws {
         let countries = SampleData.countries
-        let service = CountriesServiceMock(result: .success(countries))
+        let sortedCountries = countries.sorted { $0.displayName < $1.displayName }
+        let service = CountriesServiceMock(result: Result<[Country], Error>.success(countries))
         let viewModel = CountryListViewModel(service: service)
 
         await viewModel.loadCountries()
-        viewModel.selectedRegion = .europe
+        viewModel.selectedRegion = CountryListViewModel.RegionFilter.europe
 
         XCTAssertTrue(viewModel.visibleCountries.allSatisfy { $0.region == "Europe" })
+        XCTAssertEqual(viewModel.visibleCountries, sortedCountries.filter { $0.region == "Europe" })
     }
 
+    @MainActor
     func testPaginationLoadsMoreWhenNeeded() async throws {
         let countries = SampleData.largeCountriesList
-        let service = CountriesServiceMock(result: .success(countries))
+        let service = CountriesServiceMock(result: Result<[Country], Error>.success(countries))
         let viewModel = CountryListViewModel(service: service, pageSize: 3)
 
         await viewModel.loadCountries()

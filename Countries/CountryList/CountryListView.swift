@@ -16,15 +16,13 @@ struct CountryListView: View {
             .navigationTitle("Countries")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Picker("Region", selection: $viewModel.selectedRegion) {
-                            ForEach(CountryListViewModel.RegionFilter.allCases) { region in
-                                Text(region.rawValue).tag(region)
-                            }
+                    Picker("Region", selection: $viewModel.selectedRegion) {
+                        ForEach(CountryListViewModel.RegionFilter.allCases) { region in
+                            Text(region.rawValue).tag(region)
                         }
-                    } label: {
-                        Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
                     }
+                    .pickerStyle(.menu)
+                    .accessibilityLabel("Filter countries by region")
                 }
             }
         .searchable(text: $viewModel.searchText, prompt: "Search by name or capital")

@@ -1,10 +1,4 @@
-//
-//  Mocks.swift
-//  CountriesTests
-//
-//  Created by Munara Mamaeva on 14/11/25.
-//
-
+@testable import Countries
 import Foundation
 
 enum MockError: Error, LocalizedError {
